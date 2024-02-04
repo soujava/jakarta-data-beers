@@ -50,7 +50,7 @@ public class BeerService {
     @DELETE
     @Path("/{id}")
     public void remove(@PathParam("id") int id) {
-        beerRepository.deleteByBeerId(id);
+        beerRepository.deleteById(id);
     }
 
     @GET
