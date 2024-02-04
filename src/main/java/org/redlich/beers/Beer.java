@@ -4,6 +4,8 @@ import jakarta.nosql.Column;
 import jakarta.nosql.Entity;
 import jakarta.nosql.Id;
 
+import java.util.Objects;
+
 @Entity
 public class Beer {
     @Id
@@ -132,6 +134,19 @@ public class Beer {
                 ", abv = '" + getAbv() + '\'' +
                 " }\n";
         }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Beer beer = (Beer) o;
+        return id == beer.id && brewerId == beer.brewerId && Double.compare(abv, beer.abv) == 0 && Objects.equals(name, beer.name) && type == beer.type;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, name, type, brewerId, abv);
+    }
 
     public static BeerBuilder builder() {
         return new BeerBuilder();
