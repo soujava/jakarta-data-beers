@@ -17,9 +17,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.MountableFile;
 
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.redlich.beers.utils.ContainerUtils.buildURI;
 
@@ -42,7 +44,7 @@ class BeerServiceIT {
             .forHostPath(Paths.get("target/beers.war").toAbsolutePath(), 0777);
 
     @Container
-    private static GenericContainer beers = new GenericContainer(ContainerUtils.PAYARA_SERVER_FULL)
+    private static GenericContainer beerService = new GenericContainer(ContainerUtils.PAYARA_SERVER_FULL)
             .withNetwork(INTERNAL_NETWORK)
             .withEnv("JNOSQL_MONGODB_HOST", "mongodb:27017")
             .dependsOn(mongodb)
@@ -51,27 +53,32 @@ class BeerServiceIT {
             .waitingFor(Wait.forLogMessage(".* beers was successfully deployed.*\\s", 1));
 
 
-    private static final Beer beer = Beer.builder()
-            .id(1)
-            .name(faker.beer().name())
-            .type(BeerType.values()[
-                    faker.random().nextInt(0, BeerType.values().length - 1)])
-            .brewer_id(1)
-            .abv(0.05)
-            .build();
+    private static final List<Beer> beers = new ArrayList<>(List.of(createBeer(), createBeer(), createBeer()));
+
+    private static Beer createBeer() {
+        return Beer.builder()
+                .id(faker.random().nextInt(1, 100))
+                .name(faker.beer().name())
+                .type(BeerType.values()[
+                        faker.random().nextInt(0, BeerType.values().length - 1)])
+                .brewer_id(faker.random().nextInt(1, 10))
+                .abv(faker.random().nextDouble(0.01, 100.0))
+                .build();
+    }
 
     @Test
     @Order(1)
     @DisplayName("should add a beer")
     void shouldAddBeer() {
 
-        given()
+        beers.forEach(beer -> given()
                 .contentType(ContentType.JSON)
                 .body(beer)
                 .when()
-                .post(buildURI(beers, "/beers/db/beer/" + beer.getId()))
+                .post(buildURI(beerService, "/beers/db/beer/" + beer.getId()))
                 .then()
-                .statusCode(200);
+                .statusCode(200));
+
     }
 
     @Test
@@ -82,7 +89,7 @@ class BeerServiceIT {
         var retrievedBeers = given()
                 .accept(ContentType.JSON)
                 .when()
-                .get(buildURI(beers, "/beers/db/beer"))
+                .get(buildURI(beerService, "/beers/db/beer"))
                 .then()
                 .statusCode(200)
                 .extract().as(new TypeRef<List<Beer>>() {
@@ -92,29 +99,72 @@ class BeerServiceIT {
 
             softly.assertThat(retrievedBeers)
                     .as("should have 1 beer")
-                    .hasSize(1);
+                    .hasSize(beers.size());
 
-            Beer retrievedBeer = retrievedBeers.get(0);
-
-            softly.assertThat(retrievedBeer)
-                    .as("should not be null")
-                    .isNotNull();
-            softly.assertThat(retrievedBeer.getId())
-                    .as("should have the same id as the beer added")
-                    .isEqualTo(beer.getId());
-            softly.assertThat(retrievedBeer.getName())
-                    .as("should have the same name as the beer added")
-                    .isEqualTo(beer.getName());
-            softly.assertThat(retrievedBeer.getAbv())
-                    .as("should have the same abv as the beer added")
-                    .isEqualTo(beer.getAbv());
-            softly.assertThat(retrievedBeer.getType())
-                    .as("should have the same type as the beer added")
-                    .isEqualTo(beer.getType());
-            softly.assertThat(retrievedBeer.getBrewerId())
-                    .as("should have the same brewer id as the beer added")
-                    .isEqualTo(beer.getBrewerId());
+            softly.assertThat(retrievedBeers)
+                    .as("should contain the beers")
+                    .containsAll(beers);
         });
 
+    }
+
+    @Test
+    @Order(3)
+    @DisplayName("should remove a beer")
+    void shouldRemoveBeer() {
+
+        var beerToRemove = beers.remove(0);
+
+        given()
+                .log().all()
+                .when()
+                .delete(buildURI(beerService, "/beers/db/beer/" + beerToRemove.getId()))
+                .then()
+                .statusCode(204);
+
+        var retrievedBeers = given()
+                .accept(ContentType.JSON)
+                .when()
+                .get(buildURI(beerService, "/beers/db/beer"))
+                .then()
+                .statusCode(200)
+                .extract().as(new TypeRef<List<Beer>>() {
+                });
+
+        assertSoftly(softly -> {
+
+            softly.assertThat(retrievedBeers)
+                    .as("should have 2 beer")
+                    .hasSize(beers.size());
+
+            softly.assertThat(retrievedBeers)
+                    .as("should contain the beers")
+                    .containsAll(beers);
+        });
+
+    }
+    @Test
+    @Order(4)
+    @DisplayName("should remove all beers")
+    void shouldRemoveAllBeers() {
+
+        given()
+                .when()
+                .delete(buildURI(beerService, "/beers/db/beer"))
+                .then()
+                .statusCode(204);
+
+        var retrievedBeers = given()
+                .accept(ContentType.JSON)
+                .when()
+                .get(buildURI(beerService, "/beers/db/beer"))
+                .then()
+                .statusCode(200)
+                .extract().as(new TypeRef<List<Beer>>() {
+                });
+
+        assertThat(retrievedBeers)
+                .as("should have 0 beer")
+                .isEmpty();
     }
 }
