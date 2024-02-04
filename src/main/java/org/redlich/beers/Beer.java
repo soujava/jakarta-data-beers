@@ -77,6 +77,51 @@ public class Beer {
         return abv;
         }
 
+    /**
+     * Defines the id of the Beer entity. It's required by JNoSQL
+     *
+     * @param id
+     */
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    /**
+     * Defines the name of the Beer entity. It's required by JNoSQL.
+     *
+     * @param name
+     */
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    /**
+     * Defines the type of the Beer entity. It's required by JNoSQL.
+     *
+     * @param type
+     */
+    public void setType(BeerType type) {
+        this.type = type;
+    }
+
+    /**
+     * Defines the id of the Brewer entity. It's required by JNoSQL.
+     *
+     * @param brewerId
+     */
+    public void setBrewerId(int brewerId) {
+        this.brewerId = brewerId;
+    }
+
+    /**
+     * Defines the value of `abv`. It's required by JNoSQL.
+     *
+     * @param abv
+     */
+    public void setAbv(double abv) {
+        this.abv = abv;
+    }
+
     @Override
     public String toString() {
         return "Beer { " +
