@@ -33,32 +33,30 @@ public class BeerService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public String add(Beer beer) {
-
         try {
             beerRepository.save(beer);
-            }
-        catch (ConstraintViolationException x) {
+        } catch (ConstraintViolationException x) {
             JsonArrayBuilder messages = Json.createArrayBuilder();
             for (ConstraintViolation<?> v : x.getConstraintViolations()) {
                 messages.add(v.getMessage());
-                }
-            return messages.build().toString();
             }
-        return "";
+            return messages.build().toString();
         }
+        return "";
+    }
 
     @DELETE
     @Path("/{id}")
     public void remove(@PathParam("id") int id) {
         beerRepository.deleteByBeerId(id);
-        }
+    }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public String retrieve() {
         Iterable<Beer> beerRepositoryIterable = beerRepository.findAll()::iterator;
         return beerRepositoryToJsonArray(beerRepositoryIterable);
-        }
+    }
 
     @GET
     @Path("/brewer/{brewer}")
@@ -67,7 +65,7 @@ public class BeerService {
         // List<Beer> beerRepositoryList = beerRepository.findByBrewer(Brewer.fromString(brewer));
         List<Beer> beerRepositoryList = beerRepository.findByBeer(beer);
         return beerRepositoryToJsonArray(beerRepositoryList);
-        }
+    }
 
     @GET
     @Path("/brewer/{brewer}/page/{pageNum}")
@@ -82,10 +80,10 @@ public class BeerService {
         Page<Beer> page = beerRepository.findByBeer(beer, pageRequest);
 
         return beerRepositoryToJsonArray(page);
-        }
+    }
 
     @DELETE
-    public void remove() {
+    public void removeAll() {
         beerRepository.deleteAll();
     }
 
@@ -93,12 +91,13 @@ public class BeerService {
         JsonArrayBuilder jab = Json.createArrayBuilder();
         for (Beer c : beerRepository) {
             JsonObject json = Json.createObjectBuilder()
-                    .add("Name", c.getName())
+                    .add("name", c.getName())
                     .add("id", c.getId())
-                    .add("ABV", c.getAbv())
-                    .add("BrewerId", c.getBrewerId()).build();
+                    .add("abv", c.getAbv())
+                    .add("type", c.getType().name())
+                    .add("brewerId", c.getBrewerId()).build();
             jab.add(json);
-            }
-        return jab.build().toString();
         }
+        return jab.build().toString();
     }
+}
